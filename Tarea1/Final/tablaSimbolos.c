@@ -1,134 +1,156 @@
 #include "anlex.h"
 
-/********************* HASH **********************/
-entrada *tabla;             // declarar la tabla de símbolos
-int tamTabla = TAMHASH;     // tamaño inicial de la tabla
-int elems = 0;              // cantidad de elementos en la tabla
+/*********************HASH************************/
+entrada *tabla;				//declarar la tabla de simbolos
+int tamTabla=TAMHASH;		//utilizado para cuando se debe hacer rehash
+int elems=0;				//utilizado para cuando se debe hacer rehash
 
-// Función hash para calcular la posición en la tabla
-int h(const char *k, int m) {
-    unsigned h = 0, g;
-    int i;
-    for (i = 0; i < strlen(k); i++) {
-        h = (h << 4) + k[i];
-        if ((g = h & 0xf0000000)) {
-            h ^= (g >> 24);
-            h ^= g;
-        }
-    }
-    return h % m;
+int h(const char* k, int m)
+{
+	unsigned h=0,g;
+	int i;
+	for (i=0;i<strlen(k);i++)
+	{
+		h=(h << 4) + k[i];
+		if ( (g=h&0xf0000000) ){
+			h=h^(g>>24);
+			h=h^g;
+		}
+	}
+	return h%m;
 }
 
-// Inicializar la tabla de símbolos
-void initTabla() {
-    int i;
-    
-    tabla = (entrada *)malloc(tamTabla * sizeof(entrada));
-    for (i = 0; i < tamTabla; i++) {
-        tabla[i].compLex = -1;  // marca la entrada como vacía
-    }
+void initTabla()
+{	
+	int i=0;
+	
+	tabla=(entrada*)malloc(tamTabla*sizeof(entrada));
+	for(i=0;i<tamTabla;i++)
+	{
+		tabla[i].compLex=-1;
+	}
 }
 
-// Verificar si un número es primo
-int esprimo(int n) {
-    int i;
-    for (i = 3; i * i <= n; i += 2) {
-        if (n % i == 0)
-            return 0;
-    }
-    return 1;
+int esprimo(int n)
+{
+	if(n == 2 || n == 3)
+		return 1;
+	if(n == 1 || n % 2 == 0)
+		return 0;
+	for(int i = 3; i * i <= n; i += 2)
+		if(n % i == 0)
+			return 0;
+	return 1;
 }
 
-// Encontrar el siguiente número primo después de n
-int siguiente_primo(int n) {
-    if (n % 2 == 0)
-        n++;
-    for (; !esprimo(n); n += 2);
-    return n;
+int siguiente_primo(int n)
+{
+	if (n%2==0)
+		n++;
+	for (;!esprimo(n);n+=2);
+
+	return n;
 }
 
-// Rehashing: duplicar el tamaño de la tabla
-void rehash() {
-    entrada *vieja;
-    int i;
-    
-    vieja = tabla;
-    tamTabla = siguiente_primo(2 * tamTabla);
-    initTabla();
-    for (i = 0; i < tamTabla / 2; i++) {
-        if (vieja[i].compLex != -1)
-            insertar(vieja[i]);
-    }
-    free(vieja);
+//en caso de que la tabla llegue al limite, duplicar el tamaño
+void rehash()
+{
+	entrada *vieja;
+	int i;
+	vieja=tabla;
+	tamTabla=siguiente_primo(2*tamTabla);
+	initTabla();
+	for (i=0;i<tamTabla/2;i++)
+	{
+		if(vieja[i].compLex!=-1)
+			insertar(vieja[i]);
+	}		
+	free(vieja);
 }
 
-// Insertar una entrada en la tabla de símbolos
-void insertar(entrada e) {
-    int pos;
-    
-    if (++elems >= tamTabla / 2)
-        rehash();
-    
-    pos = h(e.lexema, tamTabla);
-    while (tabla[pos].compLex != -1) {
-        pos++;
-        if (pos == tamTabla)
-            pos = 0;
-    }
-    tabla[pos] = e;
+//insertar una entrada en la tabla
+void insertar(entrada e)
+{
+	int pos;
+	if (++elems>=tamTabla/2)
+		rehash();
+	pos=h(e.lexema,tamTabla);
+	while (tabla[pos].compLex!=-1)
+	{
+		pos++;
+		if (pos==tamTabla)
+			pos=0;
+	}
+	tabla[pos]=e;
+
+}
+//busca una clave en la tabla, si no existe devuelve NULL, posicion en caso contrario
+entrada* buscar(const char *clave)
+{
+	int pos;
+	pos=h(clave,tamTabla);
+	while(tabla[pos].compLex!=-1 && strcmp(tabla[pos].lexema,clave)!=0 )
+	{
+		pos++;
+		if (pos==tamTabla)
+			pos=0;
+	}
+	return &tabla[pos];
 }
 
-// Buscar una clave en la tabla de símbolos
-entrada *buscar(const char *clave) {
-    int pos;
-    
-    pos = h(clave, tamTabla);
-    while (tabla[pos].compLex != -1 && strcmp(tabla[pos].lexema, clave) != 0) {
-        pos++;
-        if (pos == tamTabla)
-            pos = 0;
-    }
-    return &tabla[pos];
+void insertTablaSimbolos(const char *s, int n)
+{
+	entrada e;
+	strcpy(e.lexema,s);
+	// sprintf(e.lexema,s);
+	e.compLex=n;
+	insertar(e);
 }
 
-// Insertar tokens y palabras clave de JSON en la tabla de símbolos
-void insertarTokensJSON() {
-    const char *tokens[] = {
-        "{", "}", "[", "]", ":", ",", "true", "false", "null"
-    };
-    int i, compLex;
-    entrada e;
-    
-    for (i = 0; i < sizeof(tokens) / sizeof(tokens[0]); i++) {
-        if (strcmp(tokens[i], "{") == 0) {
-            compLex = L_LLAVE;
-        } else if (strcmp(tokens[i], "}") == 0) {
-            compLex = R_LLAVE;
-        } else if (strcmp(tokens[i], "[") == 0) {
-            compLex = L_CORCHETE;
-        } else if (strcmp(tokens[i], "]") == 0) {
-            compLex = R_CORCHETE;
-        } else if (strcmp(tokens[i], ":") == 0) {
-            compLex = DOS_PUNTOS;
-        } else if (strcmp(tokens[i], ",") == 0) {
-            compLex = COMA;
-        } else if (strcmp(tokens[i], "true") == 0) {
-            compLex = PR_TRUE;
-        } else if (strcmp(tokens[i], "false") == 0) {
-            compLex = PR_FALSE;
-        } else if (strcmp(tokens[i], "null") == 0) {
-            compLex = PR_NULL;
-        }
-        
-        strcpy(e.lexema, tokens[i]);
-        e.compLex = compLex;
-        insertar(e);
-    }
+char* getTokenFromCode(int code) {
+  switch (code) {
+		case L_CORCHETE:
+			return "L_CORCHETE";
+		case R_CORCHETE:
+			return "R_CORCHETE";
+		case L_LLAVE:
+			return "L_LLAVE";
+		case R_LLAVE:
+			return "R_LLAVE";
+		case COMA:
+			return "COMA";
+		case DOS_PUNTOS:
+			return "DOS_PUNTOS";
+		case LITERAL_CADENA:
+			return "LITERAL_CADENA";
+		case LITERAL_NUM:
+			return "LITERAL_NUM";
+		case PR_TRUE:
+			return "PR_TRUE";
+		case PR_FALSE:
+			return "PR_FALSE";
+		case PR_NULL:
+			return "PR_NULL";
+		case EOF2:
+			return "EOF";
+		default:
+			return "";
+	}
 }
 
-// Inicializar la tabla de símbolos con tokens de JSON
-void initTablaSimbolos() {
-    initTabla();
-    insertarTokensJSON();
+void initTablaSimbolos()
+{
+	insertTablaSimbolos("[",L_CORCHETE);
+	insertTablaSimbolos("]",R_CORCHETE);
+	insertTablaSimbolos("{",L_LLAVE);
+	insertTablaSimbolos("}",R_LLAVE);
+	insertTablaSimbolos(",",COMA);
+	insertTablaSimbolos(":",DOS_PUNTOS);
+	insertTablaSimbolos("true",PR_TRUE);
+	insertTablaSimbolos("TRUE",PR_TRUE);
+	insertTablaSimbolos("false",PR_FALSE);
+	insertTablaSimbolos("FALSE",PR_FALSE);
+	insertTablaSimbolos("null",PR_NULL);
+	insertTablaSimbolos("NULL",PR_NULL);
+	insertTablaSimbolos("eof",EOF2);
 }
-

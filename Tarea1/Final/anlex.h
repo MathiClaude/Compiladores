@@ -6,35 +6,38 @@
 
 /************* Definiciones ********************/
 
-// Codigos de componentes léxicos para JSON
-#define L_LLAVE         301   // {
-#define R_LLAVE         302   // }
-#define L_CORCHETE      303   // [
-#define R_CORCHETE      304   // ]
-#define DOS_PUNTOS      305   // :
-#define COMA            306   // ,
-#define LITERAL_CADENA  307   // "string"
-#define LITERAL_NUM     308   // number
-#define PR_TRUE         309   // true
-#define PR_FALSE        310   // false
-#define PR_NULL         311   // null
-#define EOF_JSON        312   // Fin de archivo JSON
+//Codigos
+#define L_CORCHETE			256
+#define R_CORCHETE			257
+#define L_LLAVE					258
+#define R_LLAVE					259
+#define COMA						260
+#define DOS_PUNTOS			261
+#define LITERAL_CADENA	262
+#define LITERAL_NUM			263
+#define PR_TRUE					264
+#define PR_FALSE				265
+#define PR_NULL					266
+#define EOF2						267
 // Fin Codigos
 #define TAMBUFF 	5
-#define TAMLEX  	50   // Tamaño máximo de un lexema
-#define TAMHASH 	101  // Tamaño de la tabla hash para la tabla de símbolos
+#define TAMLEX 		50
+#define TAMHASH 	101
 
 /************* Estructuras ********************/
 
-typedef struct entrada {
-    int compLex;
-    char lexema[TAMLEX];
-    // Pueden añadirse más atributos según sea necesario para JSON
+typedef struct entrada{
+	//definir los campos de 1 entrada de la tabla de simbolos
+	int compLex;
+	char lexema[TAMLEX];	
+	struct entrada *tipoDato; // null puede representar variable no declarada	
+	// aqui irian mas atributos para funciones y procedimientos...
+	
 } entrada;
 
 typedef struct {
-    int compLex;
-    char lexema[TAMLEX];
+	int compLex;
+	entrada *pe;
 } token;
 
 /************* Prototipos ********************/
@@ -43,29 +46,4 @@ entrada* buscar(const char *clave);
 void initTabla();
 void initTablaSimbolos();
 void getToken();
-void error(const char *mensaje);
-
-/************* Constantes de Token para JSON ********************/
-const char *tokens_json[] = {
-    "L_LLAVE",
-    "R_LLAVE",
-    "L_CORCHETE",
-    "R_CORCHETE",
-    "DOS_PUNTOS",
-    "COMA",
-    "LITERAL_CADENA",
-    "LITERAL_NUM",
-    "PR_TRUE",
-    "PR_FALSE",
-    "PR_NULL",
-    "EOF_JSON"
-};
-
-/************* Función para imprimir tokens ********************/
-void imprimirToken(int compLex) {
-    if (compLex >= L_LLAVE && compLex <= EOF_JSON) {
-        printf("%s ", tokens_json[compLex - L_LLAVE]);
-    } else {
-        printf("DESCONOCIDO ");
-    }
-}
+char* getTokenFromCode(int);
